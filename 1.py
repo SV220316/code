@@ -1,40 +1,42 @@
-import sounddevice as sd
-import numpy as np
-from gtts import gTTS
-import tempfile
-import os
-import time
-from scipy.io.wavfile import write
-from pydub import AudioSegment
+import google.generativeai as genai
+from google.ai.generativelanguage_v1beta.types import content
 
-def speak(text):
-    # Generate speech using gTTS
-    tts = gTTS(text=text, lang='en-us', slow=False)
-    timestamp = int(time.time())
-    mp3_path = os.path.join(tempfile.gettempdir(), f"response_{timestamp}.mp3")
-    
-    try:
-        tts.save(mp3_path)
-    except Exception as e:
-        print(f"Error saving TTS file: {e}")
-        return
+# Initialize Google Gemini AI
+api_key = "AIzaSyCSq_m1c24gZMd10pQ6Irou6F-v5BfwxXo"
+genai.configure(api_key=api_key)
 
-    # Convert MP3 to WAV using pydub
-    sound = AudioSegment.from_mp3(mp3_path)
-    wav_path = os.path.join(tempfile.gettempdir(), f"response_{timestamp}.wav")
-    sound.export(wav_path, format="wav")
-    
-    # Read the WAV file and play using sounddevice
-    try:
-        fs, data = write(wav_path, np.array(sound.get_array_of_samples()))
-        sd.play(data, fs)  # Play the WAV file
-        sd.wait()  # Wait for the sound to finish
-    except Exception as e:
-        print(f"Error playing WAV: {e}")
-        return
+# Set the generation configuration for Gemini model
+generation_config = {
+    "temperature": 1,
+    "top_p": 0.95,
+    "top_k": 40,
+    "max_output_tokens": 8192,
+    "response_mime_type": "text/plain",
+}
 
-def trial():
-    speak("Hello! I am Prototype")
+# Start the Gemini AI model
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    generation_config=generation_config,
+    system_instruction="",
+    tools=[genai.protos.Tool(function_declarations=[])]
+)
+
+# Start a chat session with the Gemini model
+chat_session = model.start_chat(history=[])
+
+def handle_default_response(SSTinput):
+    response = chat_session.send_message(SSTinput)
+    print("Gemini Response:", response.text)
+
+def start_chat():
+    while True:
+        SSTinput = input("Please type something: ")
+        handle_default_response(SSTinput)
+
+def Program_Init():
+    print("Initializing program...")
+    start_chat()
 
 if __name__ == "__main__":
-    trial()
+    Program_Init()
